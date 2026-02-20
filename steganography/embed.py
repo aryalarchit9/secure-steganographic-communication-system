@@ -13,8 +13,13 @@ def embed_message(input_image_path, output_image_path, secret_message):
     binary_message = message_to_binary(secret_message)
     binary_message += '1111111111111110'  # Delimiter
 
-    data_index = 0
     width, height = image.size
+    max_capacity = width * height * 3
+
+    if len(binary_message) > max_capacity:
+        raise ValueError("Message too large to fit in selected image.")
+
+    data_index = 0
 
     for y in range(height):
         for x in range(width):
