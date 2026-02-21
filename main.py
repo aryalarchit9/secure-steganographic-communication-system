@@ -2,6 +2,7 @@ from encryption.aes_encrypt import encrypt_message
 from encryption.aes_decrypt import decrypt_message
 from steganography.embed import embed_message
 from steganography.extract import extract_message
+from steganalysis.histogram_analysis import compare_images
 
 
 def main():
@@ -30,6 +31,10 @@ def main():
         decrypted = decrypt_message(extracted_encrypted, password)
         print("\n[+] Decrypted message:")
         print(decrypted)
+
+        # Steganalysis comparison
+        print("\n[+] Performing histogram analysis...")
+        compare_images(input_image, output_image)
 
     except Exception as e:
         print("\n[!] Error:", str(e))
