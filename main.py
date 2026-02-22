@@ -3,16 +3,19 @@ from encryption.aes_decrypt import decrypt_message
 from steganography.embed import embed_message
 from steganography.extract import extract_message
 from steganalysis.histogram_analysis import compare_images
-
+import sys
 
 def main():
     print("=== Secure Steganographic Communication System ===")
 
-    message = input("Enter secret message: ")
-    password = input("Enter encryption password: ")
+    if len(sys.argv) != 5:
+        print("Usage: python main.py <input_image> <output_image> <message> <password>")
+        sys.exit(1)
 
-    input_image = "test_images/input.png"
-    output_image = "test_images/output.png"
+    input_image = sys.argv[1]
+    output_image = sys.argv[2]
+    message = sys.argv[3]
+    password = sys.argv[4]
 
     try:
         # Encrypt
@@ -32,7 +35,7 @@ def main():
         print("\n[+] Decrypted message:")
         print(decrypted)
 
-        # Steganalysis comparison
+        # Steganalysis
         print("\n[+] Performing histogram analysis...")
         compare_images(input_image, output_image)
 
