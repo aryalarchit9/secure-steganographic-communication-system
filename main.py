@@ -54,3 +54,6 @@ def main():
     except Exception as e:
         logging.error(f"Error occurred: {str(e)}")
         print("\n[!] Error:", str(e))
+
+if __name__ == "__main__":
+    main()
