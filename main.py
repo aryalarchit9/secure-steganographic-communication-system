@@ -5,6 +5,8 @@ from steganography.extract import extract_message
 from steganalysis.histogram_analysis import compare_images
 import sys
 import logging
+from utils.utils import validate_password_strength
+from steganalysis.histogram_analysis import calculate_histogram_difference
 
 logging.basicConfig(
     filename="app.log",
@@ -23,6 +25,14 @@ def main():
     output_image = sys.argv[2]
     message = sys.argv[3]
     password = sys.argv[4]
+
+    valid, message_pw = validate_password_strength(password)
+    if not valid:
+        print(f"[!] Weak Password: {message_pw}")
+        logging.warning(f"Weak password attempt: {message_pw}")
+        sys.exit(1)
+    else:
+        logging.info("Password strength validated.")
 
     try:
         # Encrypt
@@ -50,6 +60,15 @@ def main():
         logging.info("Performing histogram analysis.")
         print("\n[+] Performing histogram analysis...")
         compare_images(input_image, output_image)
+
+        # Calculate histogram difference
+        score = calculate_histogram_difference(input_image, output_image)
+        print(f"[+] Histogram difference score: {score}")
+        logging.info(f"Histogram difference score: {score}")
+        
+        if score > 100000:
+            print("[!] Warning: Significant image modification detected.")
+            logging.warning("High histogram difference detected.")
 
     except Exception as e:
         logging.error(f"Error occurred: {str(e)}")

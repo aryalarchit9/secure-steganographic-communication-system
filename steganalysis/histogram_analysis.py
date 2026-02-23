@@ -30,3 +30,14 @@ def plot_histogram(image_path, title):
 def compare_images(original_image, stego_image):
     plot_histogram(original_image, "Original Image Histogram")
     plot_histogram(stego_image, "Stego Image Histogram")
+
+
+def calculate_histogram_difference(original_image, stego_image):
+    image1 = Image.open(original_image).convert("RGB")
+    image2 = Image.open(stego_image).convert("RGB")
+
+    data1 = np.array(image1)
+    data2 = np.array(image2)
+
+    diff = np.sum(np.abs(data1 - data2))
+    return diff    
