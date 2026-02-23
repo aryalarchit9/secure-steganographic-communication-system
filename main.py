@@ -1,24 +1,23 @@
+import sys
+import logging
+
 from encryption.aes_encrypt import encrypt_message
 from encryption.aes_decrypt import decrypt_message
 from steganography.embed import embed_message
 from steganography.extract import extract_message
-from steganalysis.histogram_analysis import compare_images
-import sys
-import logging
-from utils.utils import validate_password_strength
-from steganalysis.histogram_analysis import calculate_histogram_difference
-
-logging.basicConfig(
-    filename="app.log",
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s"
+from steganalysis.histogram_analysis import (
+    compare_images,
+    calculate_histogram_difference,
 )
+from utils.utils import validate_password_strength
+
 
 def main():
     print("=== Secure Steganographic Communication System ===")
 
-    if len(sys.argv) != 5:
-        print("Usage: python main.py <input_image> <output_image> <message> <password>")
+    # ---------------- CLI ARGUMENT CHECK ----------------
+    if len(sys.argv) not in (5, 6):
+        print("Usage: python main.py <input_image> <output_image> <message> <password> [--debug]")
         sys.exit(1)
 
     input_image = sys.argv[1]
@@ -26,14 +25,32 @@ def main():
     message = sys.argv[3]
     password = sys.argv[4]
 
-    valid, message_pw = validate_password_strength(password)
-    if not valid:
-        print(f"[!] Weak Password: {message_pw}")
-        logging.warning(f"Weak password attempt: {message_pw}")
-        sys.exit(1)
-    else:
-        logging.info("Password strength validated.")
+    debug_mode = False
+    if len(sys.argv) == 6 and sys.argv[5] == "--debug":
+        debug_mode = True
 
+    # ---------------- LOGGING CONFIG ----------------
+    log_level = logging.DEBUG if debug_mode else logging.INFO
+
+    logging.basicConfig(
+        filename="app.log",
+        level=log_level,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+    )
+
+    logging.info("Application started.")
+
+    # ---------------- PASSWORD VALIDATION ----------------
+    valid, pw_message = validate_password_strength(password)
+
+    if not valid:
+        print(f"[!] Weak Password: {pw_message}")
+        logging.warning(f"Weak password attempt: {pw_message}")
+        sys.exit(1)
+
+    logging.info("Password strength validated.")
+
+    # ---------------- MAIN PROCESS ----------------
     try:
         # Encrypt
         encrypted = encrypt_message(message, password)
@@ -56,16 +73,16 @@ def main():
         print("\n[+] Decrypted message:")
         print(decrypted)
 
-        # Steganalysis
-        logging.info("Performing histogram analysis.")
+        # Steganalysis (Visual)
+        logging.info("Performing histogram comparison.")
         print("\n[+] Performing histogram analysis...")
         compare_images(input_image, output_image)
 
-        # Calculate histogram difference
+        # Detection Score
         score = calculate_histogram_difference(input_image, output_image)
         print(f"[+] Histogram difference score: {score}")
         logging.info(f"Histogram difference score: {score}")
-        
+
         if score > 100000:
             print("[!] Warning: Significant image modification detected.")
             logging.warning("High histogram difference detected.")
@@ -73,6 +90,7 @@ def main():
     except Exception as e:
         logging.error(f"Error occurred: {str(e)}")
         print("\n[!] Error:", str(e))
+
 
 if __name__ == "__main__":
     main()
