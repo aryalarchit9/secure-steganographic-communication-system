@@ -1,5 +1,3 @@
-from email.mime import image
-
 from PIL import Image
 import os
 
@@ -7,18 +5,11 @@ import os
 def message_to_binary(message: str):
     return ''.join(format(ord(char), '08b') for char in message)
 
-def embed_message(input_image, output_image, encrypted_message):
-    # Open and convert to RGB
-    image = Image.open(input_image)
 
-    # Convert to PNG-safe RGB format
-    if image.format != "PNG":
-        image = image.convert("RGB")
-        input_image = "temp_input.png"
-        image.save(input_image, "PNG")
-        image = Image.open(input_image)
-        image = image.convert("RGB")
-        pixels = image.load()
+def embed_message(input_image, output_image, encrypted_message):
+    # Open and convert to RGB (works for PNG/JPG/BMP and avoids mode issues like RGBA/P)
+    image = Image.open(input_image).convert("RGB")
+    pixels = image.load()
 
     binary_message = message_to_binary(encrypted_message)
     binary_message += '1111111111111110'  # Delimiter
@@ -33,21 +24,30 @@ def embed_message(input_image, output_image, encrypted_message):
 
     for y in range(height):
         for x in range(width):
-            if data_index < len(binary_message):
-                r, g, b = pixels[x, y]
+            if data_index >= len(binary_message):
+                break
 
-                r = (r & ~1) | int(binary_message[data_index])
+            r, g, b = pixels[x, y]
+
+            # R
+            r = (r & ~1) | int(binary_message[data_index])
+            data_index += 1
+
+            # G
+            if data_index < len(binary_message):
+                g = (g & ~1) | int(binary_message[data_index])
                 data_index += 1
 
-                if data_index < len(binary_message):
-                    g = (g & ~1) | int(binary_message[data_index])
-                    data_index += 1
-
+            # B
             if data_index < len(binary_message):
                 b = (b & ~1) | int(binary_message[data_index])
                 data_index += 1
 
             pixels[x, y] = (r, g, b)
+
+        if data_index >= len(binary_message):
+            break
+
     # Ensure PNG extension
     if not output_image.lower().endswith(".png"):
         output_image += ".png"
@@ -57,6 +57,5 @@ def embed_message(input_image, output_image, encrypted_message):
     if directory and not os.path.exists(directory):
         os.makedirs(directory, exist_ok=True)
 
-    # Save image
+    # Save image as PNG (lossless, keeps embedded bits intact)
     image.save(output_image, format="PNG")
-                 
