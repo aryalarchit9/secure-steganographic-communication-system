@@ -17,17 +17,17 @@ root.title("Secure Steganography System")
 root.geometry("760x720")
 root.minsize(720, 640)
 
-# ---------------------- COLOR THEME (Charcoal + Teal) ----------------------
+# ---------------------- THEME (Warm Charcoal + Emerald) ----------------------
 
 COLORS = {
-    "bg": "#111827",
-    "panel": "#0b1220",
-    "text": "#e5e7eb",
-    "muted": "#9ca3af",
-    "accent": "#14b8a6",
-    "accent_dark": "#0f766e",
+    "bg": "#1c1917",          # warm charcoal
+    "panel": "#0f0f0f",       # near-black panels
+    "text": "#f5f5f4",        # warm white
+    "muted": "#a8a29e",       # muted stone
+    "accent": "#22c55e",      # emerald (primary)
+    "accent_dark": "#16a34a", # emerald dark (hover)
     "good": "#22c55e",
-    "warn": "#f59e0b",
+    "warn": "#f59e0b",        # amber
     "bad": "#ef4444",
 }
 
@@ -105,18 +105,13 @@ canvas.bind_all("<Button-4>", _on_mousewheel_linux_up)
 canvas.bind_all("<Button-5>", _on_mousewheel_linux_down)
 
 # ---------------------- IMPORTANT FIX: SAFE INPUT PREPROCESS ----------------------
-# This is the key change that prevents "blue screen" / corrupted output when users pick JPG
-# or images with modes like RGBA/P. It converts to RGB and saves as a temporary PNG before embedding.
 
 def preprocess_to_rgb_png(input_image_path: str) -> str:
     """
     Returns a path to a temporary PNG (RGB) made from the input image.
-    Prevents issues with JPG compression and non-RGB modes.
+    Prevents corruption when users select JPG or non-RGB images.
     """
-    img = Image.open(input_image_path)
-    if img.mode != "RGB":
-        img = img.convert("RGB")
-
+    img = Image.open(input_image_path).convert("RGB")
     temp_path = os.path.join(tempfile.gettempdir(), "steg_input_preprocessed.png")
     img.save(temp_path, format="PNG", optimize=True)
     return temp_path
@@ -186,7 +181,7 @@ def encrypt_and_embed():
             messagebox.showerror("Error", "Secret message cannot be empty.")
             return
 
-        # Capacity check (use original file for user-friendly estimate)
+        # Capacity check (based on selected image)
         img = Image.open(input_image)
         width, height = img.size
         max_capacity = (width * height * 3) // 8
@@ -207,7 +202,7 @@ def encrypt_and_embed():
         encrypted = encrypt_message(secret_message, password)
         encrypted += "###"
 
-        # IMPORTANT: preprocess input -> RGB PNG before embedding
+        # Preprocess input to safe RGB PNG
         safe_input = preprocess_to_rgb_png(input_image)
 
         embed_message(safe_input, output_image, encrypted)
@@ -252,9 +247,9 @@ def clear_all():
     show_image_info("")
     update_strength()
 
-# ---------------------- CONSISTENT COLORED BUTTONS ----------------------
+# ---------------------- COLORED BUTTONS (CONSISTENT) ----------------------
 
-def make_action_button(parent, text, command, bg, active_bg, fg="#0b1220"):
+def make_action_button(parent, text, command, bg, active_bg, fg="#0a0a0a"):
     btn = Button(
         parent,
         text=text,
@@ -292,7 +287,7 @@ Label(
     font=("Segoe UI", 10),
 ).pack(anchor="w", pady=(6, 0))
 
-Label(container, textvariable=info_var, fg=COLORS["accent"], bg=COLORS["bg"], font=("Segoe UI", 10)).pack(anchor="w", pady=(0, 10))
+Label(container, textvariable=info_var, fg="#34d399", bg=COLORS["bg"], font=("Segoe UI", 10)).pack(anchor="w", pady=(0, 10))
 
 # Files card
 files_card = ttk.Labelframe(container, text="Files", style="Card.TLabelframe")
@@ -328,7 +323,7 @@ message_entry = Text(
     padx=10,
     pady=10,
     highlightthickness=1,
-    highlightbackground="#1f2937",
+    highlightbackground="#2a2522",
     highlightcolor=COLORS["accent"],
 )
 message_entry.pack(fill="both", expand=True, pady=(6, 10))
@@ -369,7 +364,7 @@ extracted_entry = Text(
     padx=10,
     pady=10,
     highlightthickness=1,
-    highlightbackground="#1f2937",
+    highlightbackground="#2a2522",
     highlightcolor=COLORS["accent"],
 )
 extracted_entry.pack(fill="both", expand=True, pady=(6, 0))
@@ -378,7 +373,7 @@ extracted_entry.config(state="disabled")
 # ---------------------- PINNED BUTTONS (ALWAYS VISIBLE) ----------------------
 
 make_action_button(action_bar, "Encrypt & Embed", encrypt_and_embed, COLORS["accent"], COLORS["accent_dark"]).pack(side="left")
-make_action_button(action_bar, "Decrypt & Extract", decrypt_and_extract, "#a78bfa", "#7c3aed").pack(side="left", padx=10)
-make_action_button(action_bar, "Clear All", clear_all, "#374151", "#4b5563", fg=COLORS["text"]).pack(side="right")
+make_action_button(action_bar, "Decrypt & Extract", decrypt_and_extract, "#f59e0b", "#d97706").pack(side="left", padx=10)
+make_action_button(action_bar, "Clear All", clear_all, "#44403c", "#57534e", fg=COLORS["text"]).pack(side="right")
 
 root.mainloop()
