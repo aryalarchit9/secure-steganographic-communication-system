@@ -1,115 +1,163 @@
-import tkinter as tk
+import os
+from tkinter import *
 from tkinter import filedialog, messagebox
-import logging
+from PIL import Image
 
-from encryption.aes_encrypt import encrypt_message
-from encryption.aes_decrypt import decrypt_message
 from steganography.embed import embed_message
 from steganography.extract import extract_message
-from steganalysis.histogram_analysis import calculate_histogram_difference
-from utils.utils import validate_password_strength
+from security.password_checker import check_password_strength
+from security.encryption import encrypt_message, decrypt_message
 
+# ---------------------- MAIN WINDOW ----------------------
 
-logging.basicConfig(
-    filename="app.log",
-    level=logging.INFO,
-    format="%(asctime)s - %(levelname)s - %(message)s",
-)
+root = Tk()
+root.title("Secure Steganography System")
+root.geometry("500x600")
 
+input_path = StringVar()
+output_path = StringVar()
+
+# ---------------------- BROWSE FUNCTIONS ----------------------
 
 def browse_input():
-    filename = filedialog.askopenfilename(filetypes=[("Image Files", "*.png *.jpg *.jpeg *.bmp *.tiff")])
-    input_path.set(filename)
-
+    file_path = filedialog.askopenfilename(
+        filetypes=[("Image Files", "*.png *.jpg *.jpeg *.bmp")]
+    )
+    if file_path:
+        input_path.set(file_path)
+        show_image_info(file_path)
 
 def browse_output():
-    filename = filedialog.asksaveasfilename(
+    file_path = filedialog.asksaveasfilename(
         defaultextension=".png",
-        filetypes=[("PNG Image", "*.png")]
+        filetypes=[("PNG Files", "*.png")]
     )
+    if file_path:
+        output_path.set(file_path)
 
-    if filename and not filename.lower().endswith(".png"):
-        filename += ".png"
+# ---------------------- IMAGE INFO ----------------------
 
-    output_path.set(filename)
+info_label = Label(root, text="", fg="blue")
+info_label.pack(pady=5)
+
+def show_image_info(path):
+    try:
+        img = Image.open(path)
+        width, height = img.size
+        capacity = (width * height * 3) // 8
+
+        info_label.config(
+            text=f"Image Size: {width} x {height}\nMax Capacity: {capacity} bytes"
+        )
+    except:
+        info_label.config(text="")
+
+# ---------------------- PASSWORD STRENGTH ----------------------
+
+strength_label = Label(root, text="Strength: ", font=("Arial", 10))
+strength_label.pack(pady=5)
+
+def update_strength(event=None):
+    pwd = password_entry.get()
+    score = check_password_strength(pwd)
+
+    if score < 3:
+        strength_label.config(text="Strength: Weak", fg="red")
+    elif score < 6:
+        strength_label.config(text="Strength: Medium", fg="orange")
+    else:
+        strength_label.config(text="Strength: Strong", fg="green")
+
+# ---------------------- EMBED FUNCTION ----------------------
 
 def encrypt_and_embed():
-    if not input_path.get() or not output_path.get():
-        messagebox.showerror("Error", "Please select both input and output image paths.")
-        return
     try:
-        input_img = input_path.get()
-        output_img = output_path.get()
-        message = message_entry.get("1.0", tk.END).strip()
-        password = password_entry.get()
+        input_image = input_path.get().strip()
+        output_image = output_path.get().strip()
+        secret_message = message_entry.get("1.0", END).strip()
+        password = password_entry.get().strip()
 
-        valid, pw_message = validate_password_strength(password)
-        if not valid:
-            messagebox.showerror("Weak Password", pw_message)
+        if not input_image or not os.path.exists(input_image):
+            messagebox.showerror("Error", "Valid input image required.")
             return
 
-        encrypted = encrypt_message(message, password)
-        embed_message(input_img, output_img, encrypted)
+        if not output_image:
+            messagebox.showerror("Error", "Output location required.")
+            return
 
-        score = calculate_histogram_difference(input_img, output_img)
+        if not secret_message:
+            messagebox.showerror("Error", "Secret message cannot be empty.")
+            return
 
-        result_label.config(
-            text=f"Message Embedded Successfully!\nDetection Score: {score}"
+        # Capacity check
+        img = Image.open(input_image)
+        width, height = img.size
+        max_capacity = (width * height * 3) // 8
+
+        if len(secret_message.encode()) > max_capacity:
+            messagebox.showerror("Error", "Message too large for selected image.")
+            return
+
+        # Normalize output path
+        output_image = os.path.normpath(output_image)
+
+        if not output_image.lower().endswith(".png"):
+            output_image += ".png"
+
+        directory = os.path.dirname(output_image)
+        if directory and not os.path.exists(directory):
+            os.makedirs(directory, exist_ok=True)
+
+        encrypted = encrypt_message(secret_message, password)
+        encrypted += "###"
+        embed_message(input_image, output_image, encrypted)
+
+        messagebox.showinfo(
+            "Success",
+            f"Message embedded successfully!\nSaved at:\n{output_image}"
         )
 
-        logging.info("Encryption and embedding successful.")
-
     except Exception as e:
-        logging.error(str(e))
         messagebox.showerror("Error", str(e))
 
+# ---------------------- EXTRACT FUNCTION ----------------------
 
-def extract_and_decrypt():
+def decrypt_and_extract():
     try:
-        output_img = output_path.get()
-        password = password_entry.get()
+        input_image = input_path.get().strip()
+        password = password_entry.get().strip()
 
-        encrypted = extract_message(output_img)
-        decrypted = decrypt_message(encrypted, password)
+        if not input_image or not os.path.exists(input_image):
+            messagebox.showerror("Error", "Valid input image required.")
+            return
 
-        result_label.config(text=f"Decrypted Message:\n{decrypted}")
+        extracted = extract_message(input_image, password)
 
-        logging.info("Extraction and decryption successful.")
+        messagebox.showinfo("Extracted Message", extracted)
 
     except Exception as e:
-        logging.error(str(e))
         messagebox.showerror("Error", str(e))
 
+# ---------------------- UI LAYOUT ----------------------
 
-# ---------------- GUI SETUP ----------------
+Label(root, text="Input Image").pack()
+Entry(root, textvariable=input_path, width=50).pack()
+Button(root, text="Browse Input", command=browse_input).pack(pady=5)
 
-root = tk.Tk()
-root.title("Secure Steganographic Communication System")
-root.geometry("600x500")
+Label(root, text="Output Image").pack()
+Entry(root, textvariable=output_path, width=50).pack()
+Button(root, text="Browse Output", command=browse_output).pack(pady=5)
 
-input_path = tk.StringVar()
-output_path = tk.StringVar()
+Label(root, text="Secret Message").pack()
+message_entry = Text(root, height=5, width=50)
+message_entry.pack(pady=5)
 
-tk.Label(root, text="Input Image").pack()
-tk.Entry(root, textvariable=input_path, width=50).pack()
-tk.Button(root, text="Browse Input", command=browse_input).pack()
+Label(root, text="Password").pack()
+password_entry = Entry(root, show="*", width=30)
+password_entry.pack(pady=5)
+password_entry.bind("<KeyRelease>", update_strength)
 
-tk.Label(root, text="Output Image").pack()
-tk.Entry(root, textvariable=output_path, width=50).pack()
-tk.Button(root, text="Browse Output", command=browse_output).pack()
-
-tk.Label(root, text="Secret Message").pack()
-message_entry = tk.Text(root, height=5, width=50)
-message_entry.pack()
-
-tk.Label(root, text="Password").pack()
-password_entry = tk.Entry(root, show="*", width=50)
-password_entry.pack()
-
-tk.Button(root, text="Encrypt & Embed", command=encrypt_and_embed).pack(pady=10)
-tk.Button(root, text="Extract & Decrypt", command=extract_and_decrypt).pack(pady=5)
-
-result_label = tk.Label(root, text="", wraplength=500)
-result_label.pack(pady=20)
+Button(root, text="Encrypt & Embed", command=encrypt_and_embed, bg="green", fg="white").pack(pady=10)
+Button(root, text="Decrypt & Extract", command=decrypt_and_extract, bg="blue", fg="white").pack(pady=5)
 
 root.mainloop()

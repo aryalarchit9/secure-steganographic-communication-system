@@ -1,37 +1,41 @@
 from PIL import Image
+from security.encryption import decrypt_message
+import os
 
 
-def binary_to_message(binary_data):
-    chars = []
-    for i in range(0, len(binary_data), 8):
-        byte = binary_data[i:i+8]
-        chars.append(chr(int(byte, 2)))
-    return ''.join(chars)
+def extract_message(image_path, password):
 
+    if not os.path.exists(image_path):
+        raise Exception("Image path does not exist")
 
-def extract_message(image_path):
-    image = Image.open(image_path)
-    image = image.convert("RGB")
-    pixels = image.load()
+    try:
+        image = Image.open(image_path)
+    except Exception as e:
+        raise Exception(f"Failed to open image: {str(e)}")
 
-    width, height = image.size
+    pixels = list(image.getdata())
+
     binary_data = ""
 
-    for y in range(height):
-        for x in range(width):
-            r, g, b = pixels[x, y]
+    for pixel in pixels:
+        for value in pixel[:3]:
+            binary_data += str(value & 1)
 
-            binary_data += str(r & 1)
-            binary_data += str(g & 1)
-            binary_data += str(b & 1)
+    extracted_text = ""
 
-    # Look for delimiter
-    delimiter = "1111111111111110"
-    end_index = binary_data.find(delimiter)
+    for i in range(0, len(binary_data), 8):
+        byte = binary_data[i:i+8]
+        if len(byte) < 8:
+            break
 
-    if end_index == -1:
-        return None
+        extracted_text += chr(int(byte, 2))
 
-    binary_message = binary_data[:end_index]
+        if extracted_text.endswith("###"):
+            break
 
-    return binary_to_message(binary_message)
+    if "###" not in extracted_text:
+        raise Exception("No hidden message found")
+
+    encrypted_message = extracted_text[:-3]
+
+    return decrypt_message(encrypted_message, password)
